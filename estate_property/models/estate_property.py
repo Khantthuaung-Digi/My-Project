@@ -72,22 +72,27 @@ class EstateProperty(models.Model):
                 estate.garden_orientation = False
     
     def action_sold(self):
-        for rec in self:
-            if rec.state == 'canceled':
-                raise UserError('Cancelled properties can not be sold')
-            rec.state = 'sold'
-            return True
+        if self.state == 'canceled':
+            raise UserError('Cancelled properties can not be sold')
+        self.state = 'sold'
+        return True
 
+    def action_receive(self):
+        self.state = 'offer_received'
+                
+    def action_accept(self):
+        self.state = 'offer_accepted'
+
+    def action_draft(self):
+        self.state = 'new'            
 
     def action_cancel(self):
-        for rec in self:
-            if rec.state == 'sold':
-                raise UserError('Sold properties can not be cancel')
-            rec.state = 'canceled'
-            return True
+        if self.state == 'sold':
+            raise UserError('Sold properties can not be cancel')
+        self.state = 'canceled'
+        return True
 
     @api.ondelete(at_uninstall=False)
     def _delete_sold_cancel(self):
-        for rec in self:
-            if rec.state in ('sold', 'canceled'):
-                raise UserError("Can't delete an active user!")
+            if self.state in ('sold', 'canceled'):
+                raise UserError("Can't delete sold property and canceled property!")

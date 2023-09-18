@@ -1,6 +1,7 @@
 
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 import datetime
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 class EstatePropertyOffer(models.Model):
     _name = 'estate.property.offer'
@@ -34,6 +35,16 @@ class EstatePropertyOffer(models.Model):
             rec.status = 'accepted'
             rec.property_id.partner_id = rec.partner_id
             rec.property_id.selling_price = rec.price
+            rec.property_id.state = 'offer_accepted'
 
     def action_refused(self):
         self.status = 'refused'
+
+    @api.model
+    def create(self, vals):
+        property_object = self.env['estate.property'].browse(vals['property_id'])
+        property_object.write({'state' : 'offer_received'})
+        for offer in property_object.offer_ids:
+            if vals['price'] < offer.price:
+                raise UserError(_("Your price is must be greather than %s", offer.price))
+        return super(EstatePropertyOffer, self).create(vals)
